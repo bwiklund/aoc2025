@@ -3,10 +3,11 @@ use std::fs::read_to_string;
 fn main() {
     println!("AOC2025 Output:");
 
-    println!("{0}", day1());
+    println!("{0}", day1(0));
+    println!("{0}", day1(1));
 }
 
-fn day1() -> i32 {
+fn day1(part: u32) -> i32 {
     let input_str = read_to_string("./src/d1_input.txt").unwrap();
 
     let directions: Vec<i32> = input_str
@@ -26,9 +27,16 @@ fn day1() -> i32 {
     let mut pos = 50;
     let mut password = 0;
     for dir in directions {
-        pos = (pos + dir).rem_euclid(size);
+        let new_pos_unclamped = pos + dir;
+
+        pos = new_pos_unclamped.rem_euclid(size);
         if pos == 0 {
             password += 1;
+        }
+
+        if part == 1 {
+            // count how many times it passed zero as well
+            password += dir.abs() / size;
         }
     }
 
