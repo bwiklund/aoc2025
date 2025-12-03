@@ -29,14 +29,33 @@ fn day1(part: u32) -> i32 {
     for dir in directions {
         let new_pos_unclamped = pos + dir;
 
-        pos = new_pos_unclamped.rem_euclid(size);
-        if pos == 0 {
-            password += 1;
+        if part == 0 {
+            pos = new_pos_unclamped.rem_euclid(size);
+            if pos == 0 {
+                password += 1;
+            }
         }
 
         if part == 1 {
-            // count how many times it passed zero as well
-            password += dir.abs() / size;
+            let mut dist_remaining_abs = dir.abs();
+            while dist_remaining_abs > 0 {
+                let mut max_dist_abs = match dir.signum() {
+                    1 => size - pos,
+                    -1 => pos,
+                    _ => panic!(),
+                };
+                if max_dist_abs == 0 {
+                    max_dist_abs = size;
+                }
+                let actual_dist_abs = i32::min(max_dist_abs, dist_remaining_abs);
+                pos += actual_dist_abs * dir.signum();
+                pos = pos.rem_euclid(size);
+                dist_remaining_abs -= actual_dist_abs;
+
+                if pos == 0 {
+                    password += 1;
+                }
+            }
         }
     }
 
