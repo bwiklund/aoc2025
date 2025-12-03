@@ -5,7 +5,8 @@ fn main() {
 
     println!("{:?}", day1(0));
     println!("{:?}", day1(1));
-    println!("{:?}", day2());
+    println!("{:?}", day2(0));
+    println!("{:?}", day2(1));
 }
 
 fn day1(part: u32) -> i32 {
@@ -61,8 +62,13 @@ fn day1(part: u32) -> i32 {
     password
 }
 
-fn day2() -> u64 {
-    // just gonna brute force p1 and assume p2 is going to be huge ranges of billions to punish me.
+fn day2(part: i32) -> u64 {
+    fn is_repetitions(digits: &Vec<u8>, stride: usize) -> bool {
+        stride > 0
+            && stride < digits.len()
+            && digits.len() % stride == 0
+            && (0..digits.len()).all(|i| digits[i] == digits[i % stride])
+    }
 
     read_to_string("./src/d2_input.txt")
         .unwrap()
@@ -70,17 +76,18 @@ fn day2() -> u64 {
         .map(|s| s.split_once('-').unwrap())
         .map(|(l, r)| (l.parse::<u64>().unwrap(), r.parse::<u64>().unwrap()))
         .map(|(min, max)| {
-            let mut sum = 0;
-            for id in min..=max {
-                let as_str = id.to_string();
-                if as_str.len() % 2 == 0 {
-                    let mid = as_str.len() / 2;
-                    if as_str[..mid] == as_str[mid..] {
-                        sum += id;
+            (min..=max)
+                .filter(|id| {
+                    let digits = id.to_string().into_bytes();
+
+                    match part {
+                        0 => is_repetitions(&digits, digits.len() / 2),
+                        1 => (1..=(digits.len() / 2).max(1))
+                            .any(|stride| is_repetitions(&digits, stride)),
+                        _ => false,
                     }
-                }
-            }
-            sum
+                })
+                .sum::<u64>()
         })
         .sum()
 }
