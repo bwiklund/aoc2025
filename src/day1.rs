@@ -52,3 +52,14 @@ pub fn solve(part: u32) -> u32 {
 
     password
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test() {
+        assert_eq!(solve(0), 1123);
+        assert_eq!(solve(1), 6695);
+    }
+}

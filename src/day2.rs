@@ -29,3 +29,14 @@ pub fn solve(part: u32) -> u64 {
         })
         .sum()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test() {
+        assert_eq!(solve(0), 15873082855);
+        assert_eq!(solve(1), 22617871034);
+    }
+}
