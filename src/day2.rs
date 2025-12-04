@@ -33,7 +33,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test() {
+    fn day2() {
         assert_eq!(solve(0), 15873082855);
         assert_eq!(solve(1), 22617871034);
     }

@@ -56,7 +56,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test() {
+    fn day1() {
         assert_eq!(solve(0), 1123);
         assert_eq!(solve(1), 6695);
     }
