@@ -2,6 +2,7 @@ mod day1;
 mod day2;
 mod day3;
 mod day4;
+mod day5;
 
 fn main() {
     println!("AOC2025 Output:");
@@ -14,4 +15,6 @@ fn main() {
     println!("{:?}", day3::solve(1));
     println!("{:?}", day4::solve(0));
     println!("{:?}", day4::solve(1));
+    println!("{:?}", day5::solve(0));
+    println!("{:?}", day5::solve(1));
 }
