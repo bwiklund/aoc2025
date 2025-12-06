@@ -77,13 +77,10 @@ pub fn solve(part: u32) -> u64 {
         .split_whitespace()
         .map(|s| Op::parse(s).unwrap());
 
-    ops.enumerate()
-        .map(|(idx, op)| {
-            let operands = columns[idx].iter();
-            match op {
-                Op::Add => operands.sum::<u64>(),
-                Op::Multiply => operands.product(),
-            }
+    ops.zip(columns.iter())
+        .map(|(op, operands)| match op {
+            Op::Add => operands.iter().sum::<u64>(),
+            Op::Multiply => operands.iter().product(),
         })
         .sum()
 }
