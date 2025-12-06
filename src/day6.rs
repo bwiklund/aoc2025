@@ -40,15 +40,8 @@ pub fn solve(part: u32) -> u64 {
         1 => {
             let digits_by_row = lines[0..lines.len() - 1]
                 .iter()
-                .map(|l| {
-                    l.chars()
-                        .map(|ch| match ch {
-                            '0'..='9' => Some(ch as u64 - '0' as u64),
-                            _ => None,
-                        })
-                        .collect()
-                })
-                .collect::<Vec<Vec<Option<u64>>>>();
+                .map(|l| l.chars().map(|ch| ch.to_digit(10)).collect())
+                .collect::<Vec<Vec<Option<u32>>>>();
 
             let columns = (0..digits_by_row[0].len())
                 .map(|col_idx| {
@@ -65,19 +58,14 @@ pub fn solve(part: u32) -> u64 {
                         digits
                             .iter()
                             .enumerate()
-                            .map(|(place, n)| 10u64.pow((digits.len() - place - 1) as u32) * n)
-                            .sum::<u64>(),
+                            .map(|(place, n)| 10u32.pow((digits.len() - place - 1) as u32) * n)
+                            .sum::<u32>(),
                     )
                 })
                 .collect::<Vec<_>>()
-                .split(|n| match n {
-                    None => true,
-                    _ => false,
-                })
-                .map(|col| col.iter().map(|n| n.unwrap()).collect())
+                .split(|n| n.is_none())
+                .map(|col| col.iter().map(|n| n.unwrap() as u64).collect())
                 .collect::<Vec<_>>();
-
-            dbg!(&columns);
 
             columns
         }
