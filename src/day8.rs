@@ -1,10 +1,10 @@
 use std::collections::{HashSet, VecDeque};
 
 struct Node {
-    x: f64,
-    y: f64,
-    z: f64,
-    circuit: u32,
+    x: i64,
+    y: i64,
+    z: i64,
+    color: u32,
     links: Vec<usize>,
 }
 
@@ -14,22 +14,24 @@ struct Wire {
     b_idx: usize,
 }
 
-fn bucket_fill(nodes: &mut Vec<Node>, idx: usize, circuit_id: u32) -> u64 {
+fn bucket_fill(nodes: &mut Vec<Node>, idx: usize) -> u64 {
     let mut queue = VecDeque::new();
     queue.push_back(idx);
     let mut circuit_size = 0;
+    let color = nodes[idx].color;
+    // note that this bucket fill has a special hardcoded case for the idx we started on, to allow us to flow out from it but not return, even if it matches the circuit id at (in fact it always will)
     while let Some(next) = queue.pop_front() {
         let node = &mut nodes[next];
-        if !node.circuit == circuit_id {
+        if node.color == color && next != idx {
             continue;
         }
-        node.circuit = circuit_id;
+        node.color = color;
         circuit_size += 1;
 
         let links = node.links.clone(); // bad! how do i made rust not fight me here.
         for link in &links {
             let link_node = &nodes[*link];
-            if link_node.circuit != circuit_id {
+            if link_node.color != color && *link != idx {
                 // TODO target color...?
                 queue.push_back(*link);
             }
@@ -44,12 +46,12 @@ pub fn solve(part: u32) -> u64 {
         .lines()
         .enumerate()
         .map(|(idx, l)| {
-            let nums: Vec<_> = l.split(',').map(|s| s.parse::<f64>().unwrap()).collect();
+            let nums: Vec<_> = l.split(',').map(|s| s.parse::<i64>().unwrap()).collect();
             Node {
                 x: nums[0],
                 y: nums[1],
                 z: nums[2],
-                circuit: idx as u32,
+                color: idx as u32,
                 links: vec![],
             }
         })
@@ -60,8 +62,10 @@ pub fn solve(part: u32) -> u64 {
         for b_idx in 0..a_idx {
             let v1 = &nodes[a_idx];
             let v2 = &nodes[b_idx];
-            let len = ((v2.x - v1.x).powf(2.0) + (v2.y - v1.y).powf(2.0) + (v2.z - v1.z).powf(2.0))
-                .sqrt();
+            let len = (((v2.x - v1.x) as f64).powf(2.0)
+                + ((v2.y - v1.y) as f64).powf(2.0)
+                + ((v2.z - v1.z) as f64).powf(2.0))
+            .sqrt();
             connections.push(Wire { len, a_idx, b_idx });
         }
     }
@@ -82,15 +86,13 @@ pub fn solve(part: u32) -> u64 {
             });
 
             let mut circuit_sizes = vec![];
-            let mut circuit_id = 0;
             for idx in 0..nodes.len() {
                 let n = &nodes[idx];
                 if n.links.is_empty() {
                     continue;
                 }
 
-                let circuit_size = bucket_fill(&mut nodes, idx, circuit_id);
-                circuit_id += 1;
+                let circuit_size = bucket_fill(&mut nodes, idx);
 
                 circuit_sizes.push(circuit_size);
             }
@@ -104,13 +106,20 @@ pub fn solve(part: u32) -> u64 {
         1 => {
             // different approach. each step, establish one connection. if that connection touches nothing, give the two of them a new cirtcuit id. if one or both ends have links, pick one and bucket fill the other side
 
-            let mut lit = 0;
-            for c in connections {
+            for (_conn_idx, c) in connections.iter().enumerate() {
                 nodes[c.a_idx].links.push(c.b_idx);
                 nodes[c.b_idx].links.push(c.a_idx);
+
+                // this can be faster and smarter! but it think this can work to get the answer...?
+                bucket_fill(&mut nodes, c.a_idx);
+                if nodes.iter().all(|n| n.color == nodes[c.a_idx].color) {
+                    // return conn_idx as u64;
+                    dbg!(_conn_idx);
+                    return (nodes[c.a_idx].x * nodes[c.b_idx].x) as u64; // this is the answer format
+                }
             }
 
-            0
+            panic!("didn't connect all the circuits!");
         }
 
         _ => panic!(),
@@ -124,6 +133,6 @@ mod tests {
     #[test]
     fn day7() {
         assert_eq!(solve(0), 140008);
-        // assert_eq!(solve(1), 0);
+        assert_eq!(solve(1), 0);
     }
 }
