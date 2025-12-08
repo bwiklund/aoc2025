@@ -4,7 +4,7 @@ struct Node {
     x: f64,
     y: f64,
     z: f64,
-    circuit: Option<u32>,
+    circuit: u32,
     links: Vec<usize>,
 }
 
@@ -20,18 +20,16 @@ fn bucket_fill(nodes: &mut Vec<Node>, idx: usize, circuit_id: u32) -> u64 {
     let mut circuit_size = 0;
     while let Some(next) = queue.pop_front() {
         let node = &mut nodes[next];
-        if !node.circuit.is_none() {
-            // TODO target color...?
-            // this is possible!
+        if !node.circuit == circuit_id {
             continue;
         }
-        node.circuit = Some(circuit_id);
+        node.circuit = circuit_id;
         circuit_size += 1;
 
         let links = node.links.clone(); // bad! how do i made rust not fight me here.
         for link in &links {
             let link_node = &nodes[*link];
-            if link_node.circuit.is_none() {
+            if link_node.circuit != circuit_id {
                 // TODO target color...?
                 queue.push_back(*link);
             }
@@ -44,13 +42,14 @@ pub fn solve(part: u32) -> u64 {
     let mut nodes: Vec<_> = std::fs::read_to_string("./src/day8_input.txt")
         .unwrap()
         .lines()
-        .map(|l| {
+        .enumerate()
+        .map(|(idx, l)| {
             let nums: Vec<_> = l.split(',').map(|s| s.parse::<f64>().unwrap()).collect();
             Node {
                 x: nums[0],
                 y: nums[1],
                 z: nums[2],
-                circuit: None,
+                circuit: idx as u32,
                 links: vec![],
             }
         })
@@ -66,14 +65,7 @@ pub fn solve(part: u32) -> u64 {
             connections.push(Wire { len, a_idx, b_idx });
         }
     }
-
     connections.sort_by(|a, b| a.len.partial_cmp(&b.len).unwrap());
-
-    // wire things up both ways for bucket fill pass
-    connections.iter().take(1000).for_each(|c| {
-        nodes[c.a_idx].links.push(c.b_idx);
-        nodes[c.b_idx].links.push(c.a_idx);
-    });
 
     match part {
         0 => {
@@ -83,11 +75,17 @@ pub fn solve(part: u32) -> u64 {
 
             // iterate through the nodes. when you find a node with links, bucket fill all those links, saving them to a working hashset, and tally up the product in an accumulator for the puzzle answer
 
+            // wire things up both ways for bucket fill pass
+            connections.iter().take(1000).for_each(|c| {
+                nodes[c.a_idx].links.push(c.b_idx);
+                nodes[c.b_idx].links.push(c.a_idx);
+            });
+
             let mut circuit_sizes = vec![];
             let mut circuit_id = 0;
             for idx in 0..nodes.len() {
                 let n = &nodes[idx];
-                if n.links.is_empty() || !n.circuit.is_none() {
+                if n.links.is_empty() {
                     continue;
                 }
 
@@ -104,7 +102,14 @@ pub fn solve(part: u32) -> u64 {
         }
 
         1 => {
-            // different approach
+            // different approach. each step, establish one connection. if that connection touches nothing, give the two of them a new cirtcuit id. if one or both ends have links, pick one and bucket fill the other side
+
+            let mut lit = 0;
+            for c in connections {
+                nodes[c.a_idx].links.push(c.b_idx);
+                nodes[c.b_idx].links.push(c.a_idx);
+            }
+
             0
         }
 
