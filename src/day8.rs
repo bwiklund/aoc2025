@@ -1,4 +1,4 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::VecDeque;
 
 struct Node {
     x: i64,
@@ -21,18 +21,15 @@ fn bucket_fill(nodes: &mut Vec<Node>, idx: usize) -> u64 {
     let color = nodes[idx].color;
     // note that this bucket fill has a special hardcoded case for the idx we started on, to allow us to flow out from it but not return, even if it matches the circuit id at (in fact it always will)
     while let Some(next) = queue.pop_front() {
-        let node = &mut nodes[next];
-        if node.color == color && next != idx {
+        if nodes[next].color == color && next != idx {
             continue;
         }
-        node.color = color;
+        nodes[next].color = color;
         circuit_size += 1;
 
-        let links = node.links.clone(); // bad! how do i made rust not fight me here.
-        for link in &links {
+        for link in &nodes[next].links {
             let link_node = &nodes[*link];
             if link_node.color != color && *link != idx {
-                // TODO target color...?
                 queue.push_back(*link);
             }
         }
@@ -110,11 +107,11 @@ pub fn solve(part: u32) -> u64 {
                 nodes[c.a_idx].links.push(c.b_idx);
                 nodes[c.b_idx].links.push(c.a_idx);
 
-                // this can be faster and smarter! but it think this can work to get the answer...?
                 bucket_fill(&mut nodes, c.a_idx);
                 if nodes.iter().all(|n| n.color == nodes[c.a_idx].color) {
+                    // this check can be faster and smarter! but it think this can work to get the answer...?
+                    // idea: always pick lower circuit id to bucket out, and keep track of just that id (0). but we passed and this is already quite fast so i'm moving on.
                     // return conn_idx as u64;
-                    dbg!(_conn_idx);
                     return (nodes[c.a_idx].x * nodes[c.b_idx].x) as u64; // this is the answer format
                 }
             }
@@ -131,8 +128,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn day7() {
+    fn day8() {
         assert_eq!(solve(0), 140008);
-        assert_eq!(solve(1), 0);
+        assert_eq!(solve(1), 9253260633);
     }
 }
