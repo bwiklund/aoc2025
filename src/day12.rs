@@ -1,67 +1,66 @@
+#![allow(dead_code)]
+
+#[derive(Debug)]
 struct Shape {
+    id: u32,
     w: usize,
     h: usize,
     cells: Vec<bool>,
 }
 
 #[derive(Debug)]
-enum ParsedLine {
-    ShapeId(u64),
-    ShapeRow(Vec<bool>),
-    RegionRow(u64, u64, Vec<u64>),
-}
-
-fn expect_number(chars: &Vec<char>, i: &mut usize) -> u64 {
-    let start = *i;
-    while chars[*i].is_digit(10) {
-        *i += 1;
-    }
-    chars[start..*i].iter().collect::<String>().parse().unwrap()
+struct Region {
+    w: usize,
+    h: usize,
+    shape_counts: Vec<u32>,
 }
 
 pub fn solve(part: u32) -> u64 {
-    // let shapes = vec![];
-    // let regions = vec![];
+    let mut shapes = vec![];
+    let mut regions = vec![];
 
-    let txt = std::fs::read_to_string("./src/day12_input.txt").unwrap();
-
-    let lines = txt.lines().filter_map(|l| {
-        let chars = l.chars().collect::<Vec<_>>();
-        let mut i = 0;
-        return if chars.is_empty() {
-            None
-        } else if chars[i].is_digit(10) {
-            let n1 = expect_number(&chars, &mut i);
-
-            if chars[i] == 'x' {
-                i += 1;
-                let n2 = expect_number(&chars, &mut i);
-                Some(ParsedLine::RegionRow(n1, n2, vec![]))
-            } else if chars[i] == ':' {
-                Some(ParsedLine::ShapeId(n1))
-            } else {
-                dbg!(chars);
-                panic!()
-            }
-        } else if matches!(chars[i], '.' | '#') {
-            // we're in a shape row
-            Some(ParsedLine::ShapeRow(
-                chars
-                    .iter()
+    std::fs::read_to_string("./src/day12_input.txt")
+        .unwrap()
+        .lines()
+        .for_each(|l| {
+            if l.is_empty() {
+                return;
+            } else if l.contains(':') && l.contains('x') {
+                let parts = l.split_ascii_whitespace().collect::<Vec<_>>();
+                let (w, h) = parts[0].trim_end_matches(':').split_once('x').unwrap();
+                regions.push(Region {
+                    w: w.parse().unwrap(),
+                    h: h.parse().unwrap(),
+                    shape_counts: parts[1..].iter().map(|s| s.parse().unwrap()).collect(),
+                })
+            } else if l.contains(':') && !l.contains('x') {
+                shapes.push(Shape {
+                    id: l.split_once(':').unwrap().0.parse().unwrap(),
+                    w: 0,
+                    h: 0,
+                    cells: vec![],
+                });
+            } else if l.contains('.') || l.contains('#') {
+                let row: Vec<bool> = l
+                    .chars()
                     .map(|ch| match ch {
                         '#' => true,
                         '.' => false,
                         _ => panic!(),
                     })
-                    .collect(),
-            ))
-        } else {
-            // panic!();
-            None
-        };
-    });
+                    .collect();
+                let last = shapes.len() - 1;
+                let shape = &mut shapes[last];
+                shape.h += 1;
+                shape.w = row.len();
+                shape.cells.extend(row);
+            } else {
+                panic!();
+            }
+        });
 
-    dbg!(lines.take(10).collect::<Vec<_>>());
+    dbg!(shapes);
+    dbg!(regions.iter().take(10).collect::<Vec<_>>());
 
     match part {
         0 => 0,
