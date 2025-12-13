@@ -80,34 +80,29 @@ impl Parser {
         }
         res
     }
-}
 
-pub fn solve(part: u32) -> u64 {
-    let mut shapes = vec![];
-    let mut regions = vec![];
+    fn parse(l: String) -> Result<(Vec<Shape>, Vec<Region>), ()> {
+        let mut p = Parser::new(l.as_str());
 
-    std::fs::read_to_string("./src/day12_input.txt")
-        .unwrap()
-        .lines()
-        .for_each(|l| {
-            let mut p = Parser::new(l);
-            if l.is_empty() {
-                return;
-            }
+        let mut shapes = vec![];
+        let mut regions = vec![];
 
+        while p.peek().is_some() {
             if let Some(n) = p.number() {
                 if p.accept('x').is_some() {
                     let w = n as usize;
                     let h = p.number().unwrap() as usize;
-                    p.accept(':').unwrap();
+                    p.accept(':').ok_or(())?;
 
                     let mut shape_counts = vec![];
-                    while p.peek().is_some() {
-                        p.accept(' ').unwrap();
-                        shape_counts.push(p.number().unwrap())
+                    while p.accept('\n').is_none() {
+                        p.accept(' ').ok_or(())?;
+                        shape_counts.push(p.number().ok_or(())?);
                     }
+
                     regions.push(Region { w, h, shape_counts })
                 } else if p.accept(':').is_some() {
+                    p.accept('\n').ok_or(())?;
                     shapes.push(Shape {
                         id: n,
                         w: 0,
@@ -126,11 +121,23 @@ pub fn solve(part: u32) -> u64 {
                         _ => panic!(),
                     });
                 }
+                p.accept('\n').ok_or(())?;
+
                 shapes.last_mut().expect("can't be empty").add_line(row);
+            } else if p.accept('\n').is_some() {
+                // do nothing
             } else {
                 panic!();
             }
-        });
+        }
+
+        Ok((shapes, regions))
+    }
+}
+
+pub fn solve(part: u32) -> u64 {
+    let txt = std::fs::read_to_string("./src/day12_input.txt").expect("Couldn't load file.");
+    let (shapes, regions) = Parser::parse(txt).expect("Couldn't parse file.");
 
     dbg!(shapes);
     dbg!(regions.iter().take(10).collect::<Vec<_>>());
