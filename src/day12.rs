@@ -1,18 +1,85 @@
 #![allow(dead_code)]
 
+use std::{iter::repeat_with, ops::RangeInclusive};
+
 #[derive(Debug)]
 struct Shape {
-    id: u32,
+    id: u64,
     w: usize,
     h: usize,
     cells: Vec<bool>,
+}
+
+impl Shape {
+    fn add_line(&mut self, row: Vec<bool>) {
+        self.h += 1;
+        self.w = row.len();
+        self.cells.extend(row);
+    }
 }
 
 #[derive(Debug)]
 struct Region {
     w: usize,
     h: usize,
-    shape_counts: Vec<u32>,
+    shape_counts: Vec<u64>,
+}
+
+struct Parser {
+    chars: Vec<char>,
+    i: usize,
+}
+
+impl Parser {
+    fn new(s: &str) -> Self {
+        Self {
+            chars: s.chars().collect(),
+            i: 0,
+        }
+    }
+
+    fn peek(&self) -> Option<char> {
+        self.chars.get(self.i).cloned()
+    }
+
+    fn peek_ch(&self, ch: char) -> bool {
+        match self.peek() {
+            Some(c) => c == ch,
+            None => false,
+        }
+    }
+
+    fn accept(&mut self, ch: char) -> Option<char> {
+        let res = self.chars.get(self.i).cloned().filter(|c| *c == ch);
+        if res.is_some() {
+            self.i += 1;
+        }
+        res
+    }
+
+    fn accept_range(&mut self, range: RangeInclusive<char>) -> Option<char> {
+        let ch = self.chars.get(self.i)?;
+        match range.contains(ch) {
+            true => {
+                self.i += 1;
+                Some(*ch)
+            }
+            false => None,
+        }
+    }
+
+    fn number(&mut self) -> Option<u64> {
+        let back = self.i;
+        let res = repeat_with(|| self.accept_range('0'..='9'))
+            .map_while(|x| x)
+            .collect::<String>()
+            .parse()
+            .ok();
+        if res.is_none() {
+            self.i = back
+        }
+        res
+    }
 }
 
 pub fn solve(part: u32) -> u64 {
@@ -23,36 +90,43 @@ pub fn solve(part: u32) -> u64 {
         .unwrap()
         .lines()
         .for_each(|l| {
+            let mut p = Parser::new(l);
             if l.is_empty() {
-                return; // ignore empty lines
-            } else if l.contains(':') && l.contains('x') {
-                let parts = l.split_ascii_whitespace().collect::<Vec<_>>();
-                let (w, h) = parts[0].trim_end_matches(':').split_once('x').unwrap();
-                regions.push(Region {
-                    w: w.parse().unwrap(),
-                    h: h.parse().unwrap(),
-                    shape_counts: parts[1..].iter().map(|s| s.parse().unwrap()).collect(),
-                })
-            } else if l.contains(':') && !l.contains('x') {
-                shapes.push(Shape {
-                    id: l.split_once(':').unwrap().0.parse().unwrap(),
-                    w: 0,
-                    h: 0,
-                    cells: vec![],
-                });
-            } else if l.contains('.') || l.contains('#') {
-                let row: Vec<bool> = l
-                    .chars()
-                    .map(|ch| match ch {
+                return;
+            }
+
+            if let Some(n) = p.number() {
+                if p.accept('x').is_some() {
+                    let w = n as usize;
+                    let h = p.number().unwrap() as usize;
+                    p.accept(':').unwrap();
+
+                    let mut shape_counts = vec![];
+                    while p.peek().is_some() {
+                        p.accept(' ').unwrap();
+                        shape_counts.push(p.number().unwrap())
+                    }
+                    regions.push(Region { w, h, shape_counts })
+                } else if p.accept(':').is_some() {
+                    shapes.push(Shape {
+                        id: n,
+                        w: 0,
+                        h: 0,
+                        cells: vec![],
+                    });
+                } else {
+                    panic!();
+                }
+            } else if p.peek_ch('.') || p.peek_ch('#') {
+                let mut row = vec![];
+                while let Some(ch) = p.accept('#').or_else(|| p.accept('.')) {
+                    row.push(match ch {
                         '#' => true,
                         '.' => false,
                         _ => panic!(),
-                    })
-                    .collect();
-                let shape = shapes.last_mut().expect("can't be empty");
-                shape.h += 1;
-                shape.w = row.len();
-                shape.cells.extend(row);
+                    });
+                }
+                shapes.last_mut().expect("can't be empty").add_line(row);
             } else {
                 panic!();
             }
