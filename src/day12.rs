@@ -57,6 +57,10 @@ impl Parser {
         res
     }
 
+    fn expect(&mut self, ch: char) -> Result<char, ()> {
+        self.accept(ch).ok_or(())
+    }
+
     fn accept_range(&mut self, range: RangeInclusive<char>) -> Option<char> {
         let ch = self.chars.get(self.i)?;
         match range.contains(ch) {
@@ -92,7 +96,7 @@ impl Parser {
                 if p.accept('x').is_some() {
                     let w = n as usize;
                     let h = p.number().unwrap() as usize;
-                    p.accept(':').ok_or(())?;
+                    p.expect(':')?;
 
                     let mut shape_counts = vec![];
                     while p.accept('\n').is_none() {
@@ -102,7 +106,7 @@ impl Parser {
 
                     regions.push(Region { w, h, shape_counts })
                 } else if p.accept(':').is_some() {
-                    p.accept('\n').ok_or(())?;
+                    p.expect('\n')?;
                     shapes.push(Shape {
                         id: n,
                         w: 0,
@@ -113,25 +117,27 @@ impl Parser {
                     panic!();
                 }
             } else if p.peek_ch('.') || p.peek_ch('#') {
-                let mut row = vec![];
-                while let Some(ch) = p.accept('#').or_else(|| p.accept('.')) {
-                    row.push(match ch {
-                        '#' => true,
-                        '.' => false,
-                        _ => panic!(),
-                    });
-                }
-                p.accept('\n').ok_or(())?;
-
+                let row = p.region_row()?;
                 shapes.last_mut().expect("can't be empty").add_line(row);
-            } else if p.accept('\n').is_some() {
-                // do nothing
             } else {
-                panic!();
+                p.expect('\n')?;
             }
         }
 
         Ok((shapes, regions))
+    }
+
+    fn region_row(&mut self) -> Result<Vec<bool>, ()> {
+        let mut row = vec![];
+        while let Some(ch) = self.accept('#').or_else(|| self.accept('.')) {
+            row.push(match ch {
+                '#' => true,
+                '.' => false,
+                _ => panic!(),
+            });
+        }
+        self.expect('\n')?;
+        Ok(row)
     }
 }
 
