@@ -1,0 +1,22 @@
+pub fn solve(part: u32) -> u64 {
+    // std::fs::read_to_string("./src/day9_input.txt")
+
+    match part {
+        0 => 0,
+
+        1 => 0,
+
+        _ => panic!(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn day9() {
+        assert_eq!(solve(0), 0);
+        // assert_eq!(solve(1), 0);
+    }
+}
