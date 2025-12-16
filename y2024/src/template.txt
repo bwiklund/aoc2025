@@ -1,4 +1,4 @@
-pub fn solve(part: u32) -> u64 {
+pub fn solve(part: u32) -> i64 {
     // std::fs::read_to_string("./src/dayX_input.txt")
 
     match part {
