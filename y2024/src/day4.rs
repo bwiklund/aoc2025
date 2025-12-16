@@ -37,6 +37,10 @@ impl Grid {
                 .unwrap_or(false)
         })
     }
+
+    fn iter(&self) -> impl Iterator<Item = (usize, usize)> {
+        (0..self.h).flat_map(move |y| (0..self.w).map(move |x| (x, y)))
+    }
 }
 
 pub fn solve(part: u32) -> i64 {
@@ -52,7 +56,6 @@ pub fn solve(part: u32) -> i64 {
     match part {
         0 => {
             // for each coord, try each of the 8 directions, tallying how many we found
-            let mut count = 0i64;
             let dirs = vec![
                 (1, 0),
                 (1, 1),
@@ -63,34 +66,27 @@ pub fn solve(part: u32) -> i64 {
                 (0, -1),
                 (1, -1),
             ];
-            for y in 0..grid.h as i64 {
-                for x in 0..grid.w as i64 {
-                    count += dirs
-                        .iter()
-                        .filter(|dir| grid.has_str("XMAS", x, y, dir.0, dir.1))
+            grid.iter()
+                .map(|(x, y)| {
+                    dirs.iter()
+                        .filter(|dir| grid.has_str("XMAS", x as i64, y as i64, dir.0, dir.1))
                         .count() as i64
-                }
-            }
-            count
+                })
+                .sum()
         }
 
         1 => {
-            let mut count = 0i64;
             let search = "MAS";
             let crosses = vec![(0, 0, 1, 1), (2, 0, -1, 1), (0, 2, 1, -1), (2, 2, -1, -1)];
 
-            for y in 0..grid.h as i64 {
-                for x in 0..grid.w as i64 {
-                    if 2 == crosses
+            grid.iter()
+                .filter(|&(x, y)| {
+                    2 == crosses
                         .iter()
-                        .filter(|d| grid.has_str(search, x + d.0, y + d.1, d.2, d.3))
+                        .filter(|d| grid.has_str(search, x as i64 + d.0, y as i64 + d.1, d.2, d.3))
                         .count()
-                    {
-                        count += 1;
-                    }
-                }
-            }
-            count
+                })
+                .count() as i64
         }
 
         _ => unreachable!(),
