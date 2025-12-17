@@ -139,25 +139,27 @@ pub fn solve(part: u32) -> i64 {
 
         1 => {
             let mut count = 0i64;
-            for y in 0..grid.rows.len() as i64 {
-                for x in 0..grid.rows[0].len() as i64 {
-                    if x == grid.guard_x && y == grid.guard_y {
-                        continue;
-                    }
-                    let mut cloned = grid.clone();
-                    cloned.add_barrier(x, y);
-                    loop {
-                        match cloned.advance() {
-                            AdvanceResult::Running => continue,
-                            AdvanceResult::LeftBoard => break,
-                            AdvanceResult::Looped => {
-                                count += 1;
-                                break;
-                            }
+            let mut original_path = grid.clone();
+
+            while original_path.advance() == AdvanceResult::Running {}
+
+            original_path.visited.iter().for_each(|&(x, y)| {
+                if x == grid.guard_x && y == grid.guard_y {
+                    return;
+                }
+                let mut cloned = grid.clone();
+                cloned.add_barrier(x, y);
+                loop {
+                    match cloned.advance() {
+                        AdvanceResult::Running => continue,
+                        AdvanceResult::LeftBoard => break,
+                        AdvanceResult::Looped => {
+                            count += 1;
+                            break;
                         }
                     }
                 }
-            }
+            });
             count
         }
 
