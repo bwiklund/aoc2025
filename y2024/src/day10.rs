@@ -16,16 +16,16 @@ impl Grid {
     }
 }
 
-fn traverse<F>(grid: &Grid, on_reach_dest: &mut F, x: i32, y: i32, last_elevation: i32)
+fn traverse<F>(grid: &Grid, on_reach_dest: &mut F, x: i32, y: i32, expect_elevation: i32)
 where
     F: FnMut((i32, i32)),
 {
-    let next_elev = last_elevation + 1;
-    if grid.get(x, y) == Some(next_elev) {
-        if next_elev == 9 {
+    if grid.get(x, y) == Some(expect_elevation) {
+        if expect_elevation == 9 {
             on_reach_dest((x, y));
             return;
         }
+        let next_elev = expect_elevation + 1;
         traverse(grid, on_reach_dest, x + 1, y, next_elev);
         traverse(grid, on_reach_dest, x - 1, y, next_elev);
         traverse(grid, on_reach_dest, x, y + 1, next_elev);
@@ -53,18 +53,14 @@ pub fn solve(part: u32) -> i32 {
     match part {
         0 => {
             let mut score = 0;
+            let mut counter = HashSet::with_capacity(1000);
             for y in 0..grid.h {
                 for x in 0..grid.w {
-                    let mut counter = HashSet::new();
-                    traverse(
-                        &grid,
-                        &mut |(x, y)| {
-                            counter.insert((x, y));
-                        },
-                        x,
-                        y,
-                        -1,
-                    );
+                    counter.clear();
+                    let cb = &mut |(x, y)| {
+                        counter.insert((x, y));
+                    };
+                    traverse(&grid, cb, x, y, 0);
                     score += counter.len() as i32
                 }
             }
@@ -73,17 +69,12 @@ pub fn solve(part: u32) -> i32 {
 
         1 => {
             let mut score = 0;
+            let cb = &mut |_| {
+                score += 1;
+            };
             for y in 0..grid.h {
                 for x in 0..grid.w {
-                    traverse(
-                        &grid,
-                        &mut |_| {
-                            score += 1;
-                        },
-                        x,
-                        y,
-                        -1,
-                    );
+                    traverse(&grid, cb, x, y, 0);
                 }
             }
             score
@@ -100,6 +91,6 @@ mod tests {
     #[test]
     fn day10() {
         assert_eq!(solve(0), 816);
-        assert_eq!(solve(1), 0);
+        assert_eq!(solve(1), 1960);
     }
 }
