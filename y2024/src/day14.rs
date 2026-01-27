@@ -1,4 +1,5 @@
 use regex::Regex;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 struct Robot {
@@ -37,16 +38,50 @@ pub fn solve(part: u32) -> i64 {
             for _ in 0..100 {
                 robots.iter_mut().for_each(|r| r.tick());
             }
-            let q1 = robots.iter().filter(|r| r.x < 50 && r.y < 51).count() as i64;
-            let q2 = robots.iter().filter(|r| r.x > 50 && r.y < 51).count() as i64;
-            let q3 = robots.iter().filter(|r| r.x < 50 && r.y > 51).count() as i64;
-            let q4 = robots.iter().filter(|r| r.x > 50 && r.y > 51).count() as i64;
+            let (mx, my) = (50, 51);
+            let q1 = robots.iter().filter(|r| r.x < mx && r.y < my).count() as i64;
+            let q2 = robots.iter().filter(|r| r.x > mx && r.y < my).count() as i64;
+            let q3 = robots.iter().filter(|r| r.x < mx && r.y > my).count() as i64;
+            let q4 = robots.iter().filter(|r| r.x > mx && r.y > my).count() as i64;
             q1 * q2 * q3 * q4
         }
 
-        1 => 0,
+        1 => {
+            let mut cells = HashSet::new();
+            for i in 0.. {
+                // i spent a long time hunting down the pattern to this and eventually found that the special "christmas tree" frames had no overlapping robots, while all other frames do
+                let no_overlaps = robots.iter().all(|r| cells.insert((r.x, r.y)));
+                if no_overlaps {
+                    return i;
+                }
+
+                robots.iter_mut().for_each(|r| r.tick());
+                cells.clear();
+            }
+            unreachable!()
+        }
 
         _ => unreachable!(),
+    }
+}
+
+#[allow(dead_code)]
+fn print_robots(robots: &Vec<Robot>) {
+    let mut cells = HashMap::<(i32, i32), i32>::new();
+    robots.iter().for_each(|r| {
+        let gx = r.x;
+        let gy = r.y;
+        *cells.entry((gx, gy)).or_insert(0) += 1;
+    });
+    for y in 0..103 {
+        for x in 0..101 {
+            if cells.contains_key(&(x, y)) {
+                print!("{:0}", cells.get(&(x, y)).unwrap());
+            } else {
+                print!(".");
+            }
+        }
+        print!("\n");
     }
 }
 
@@ -56,7 +91,7 @@ mod tests {
 
     #[test]
     fn day14() {
-        assert_eq!(solve(0), 0);
-        // assert_eq!(solve(1), 0);
+        assert_eq!(solve(0), 231782040);
+        assert_eq!(solve(1), 6475);
     }
 }
