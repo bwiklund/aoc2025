@@ -101,6 +101,10 @@ fn gather_affected_blocks(
     (x, y): (i32, i32),
     (dx, dy): (i32, i32),
 ) -> bool {
+    if blocks.contains(&(x, y)) {
+        return true;
+    }
+
     match grid.get(x, y) {
         None | Some(Some(Thing::Wall)) => {
             // we hit a wall, nothing can move
@@ -110,10 +114,22 @@ fn gather_affected_blocks(
             // we found an empty space, things are pushable for p1 and maybe pushable for p2
             return true;
         }
-        _ => {
-            // everything else is pushable
+        Some(Some(Thing::Barrel)) | Some(Some(Thing::Robot)) => {
+            // p1 barrel
             blocks.insert((x, y));
             return gather_affected_blocks(grid, blocks, (x + dx, y + dy), (dx, dy));
+        }
+        Some(Some(Thing::BarrelLeft)) => {
+            // p2 barrel, fork right
+            blocks.insert((x, y));
+            return gather_affected_blocks(grid, blocks, (x + dx, y + dy), (dx, dy))
+                && gather_affected_blocks(grid, blocks, (x + 1, y), (dx, dy));
+        }
+        Some(Some(Thing::BarrelRight)) => {
+            // p2 barrel, fork left
+            blocks.insert((x, y));
+            return gather_affected_blocks(grid, blocks, (x + dx, y + dy), (dx, dy))
+                && gather_affected_blocks(grid, blocks, (x - 1, y), (dx, dy));
         }
     }
 }
@@ -228,8 +244,8 @@ pub fn solve(part: u32) -> i64 {
             let mut grid = inflate_grid(grid);
             for m in moves {
                 move_robot(&mut grid, m);
-                dbg!(&grid);
-                std::thread::sleep(std::time::Duration::from_millis(16));
+                // dbg!(&grid);
+                // std::thread::sleep(std::time::Duration::from_millis(16));
             }
             gps_checksum(grid) as i64
         }
@@ -245,6 +261,6 @@ mod tests {
     #[test]
     fn day15() {
         assert_eq!(solve(0), 1429911);
-        // assert_eq!(solve(1), 0);
+        assert_eq!(solve(1), 0);
     }
 }
