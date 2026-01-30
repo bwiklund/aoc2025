@@ -101,24 +101,21 @@ fn gather_affected_blocks(
     (x, y): (i32, i32),
     (dx, dy): (i32, i32),
 ) -> bool {
-    let mut scan_x = x;
-    let mut scan_y = y;
-    for _ in 0.. {
-        scan_x += dx;
-        scan_y += dy;
-        match grid.get(scan_x, scan_y) {
-            None | Some(Some(Thing::Wall)) => {
-                return false;
-            }
-            Some(None) => {
-                return true;
-            }
-            _ => {
-                blocks.insert((scan_x, scan_y));
-            }
+    match grid.get(x, y) {
+        None | Some(Some(Thing::Wall)) => {
+            // we hit a wall, nothing can move
+            return false;
+        }
+        Some(None) => {
+            // we found an empty space, things are pushable for p1 and maybe pushable for p2
+            return true;
+        }
+        _ => {
+            // everything else is pushable
+            blocks.insert((x, y));
+            return gather_affected_blocks(grid, blocks, (x + dx, y + dy), (dx, dy));
         }
     }
-    false
 }
 
 fn move_blocks(grid: &mut Grid<Option<Thing>>, blocks: HashSet<(i32, i32)>, (dx, dy): (i32, i32)) {
@@ -137,6 +134,18 @@ fn move_blocks(grid: &mut Grid<Option<Thing>>, blocks: HashSet<(i32, i32)>, (dx,
 }
 
 fn move_robot(grid: &mut Grid<Option<Thing>>, (dx, dy): (i32, i32)) {
+    let (x, y) = find_robot(grid);
+
+    // scan out until we find an empty cell. if there is one, move everything we scanned over by 1. else stop
+    let mut blocks = HashSet::new();
+    let can_move = gather_affected_blocks(grid, &mut blocks, (x, y), (dx, dy));
+    if can_move {
+        move_blocks(grid, blocks, (dx, dy));
+    }
+}
+
+// not ideal
+fn find_robot(grid: &mut Grid<Option<Thing>>) -> (i32, i32) {
     let (x, y) = grid
         .cells
         .iter()
@@ -151,14 +160,7 @@ fn move_robot(grid: &mut Grid<Option<Thing>>, (dx, dy): (i32, i32)) {
         })
         .next()
         .unwrap();
-
-    // scan out until we find an empty cell. if there is one, move everything we scanned over by 1. else stop
-    let mut blocks = HashSet::new();
-    blocks.insert((x, y)); // the robot too
-    let can_move = gather_affected_blocks(grid, &mut blocks, (x, y), (dx, dy));
-    if can_move {
-        move_blocks(grid, blocks, (dx, dy));
-    }
+    (x, y)
 }
 
 fn gps_coord(x: i32, y: i32) -> i32 {
@@ -171,11 +173,42 @@ fn gps_checksum(grid: Grid<Option<Thing>>) -> i32 {
         .enumerate()
         .flat_map(|(y, row)| {
             row.iter().enumerate().map(move |(x, thing)| match thing {
-                Some(Thing::Barrel) => gps_coord(x as i32, y as i32),
+                Some(Thing::Barrel) | Some(Thing::BarrelLeft) => gps_coord(x as i32, y as i32),
                 _ => 0,
             })
         })
         .sum::<i32>()
+}
+
+fn inflate_grid(grid: Grid<Option<Thing>>) -> Grid<Option<Thing>> {
+    Grid {
+        w: grid.w * 2,
+        h: grid.h,
+        cells: grid
+            .cells
+            .iter()
+            .map(|row| {
+                let mut new_row = vec![];
+                for c in row {
+                    match c {
+                        Some(Thing::Robot) => {
+                            new_row.push(Some(Thing::Robot));
+                            new_row.push(None);
+                        }
+                        Some(Thing::Barrel) => {
+                            new_row.push(Some(Thing::BarrelLeft));
+                            new_row.push(Some(Thing::BarrelRight));
+                        }
+                        _ => {
+                            new_row.push(*c);
+                            new_row.push(*c);
+                        }
+                    }
+                }
+                new_row
+            })
+            .collect(),
+    }
 }
 
 pub fn solve(part: u32) -> i64 {
@@ -186,15 +219,20 @@ pub fn solve(part: u32) -> i64 {
             for m in moves {
                 move_robot(&mut grid, m);
                 // dbg!(&grid);
-                // std::thread::sleep(Duration::from_millis(16));
+                // std::thread::sleep(std::time::Duration::from_millis(16));
             }
             gps_checksum(grid) as i64
         }
 
         1 => {
-            // let grid = inflate_grid
-            0
-        },
+            let mut grid = inflate_grid(grid);
+            for m in moves {
+                move_robot(&mut grid, m);
+                dbg!(&grid);
+                std::thread::sleep(std::time::Duration::from_millis(16));
+            }
+            gps_checksum(grid) as i64
+        }
 
         _ => unreachable!(),
     }
