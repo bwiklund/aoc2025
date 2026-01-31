@@ -111,6 +111,6 @@ mod tests {
     #[test]
     fn day13() {
         assert_eq!(solve(0), 39996);
-        assert_eq!(solve(1), 0);
+        assert_eq!(solve(1), 73267584326867);
     }
 }
