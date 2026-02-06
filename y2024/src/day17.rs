@@ -1,13 +1,13 @@
 use regex::{self, Regex};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Machine {
-    a: i32,
-    b: i32,
-    c: i32,
+    a: i64,
+    b: i64,
+    c: i64,
     pc: usize,
     program: Vec<u8>,
-    output: Vec<i32>,
+    output: Vec<i64>,
 }
 
 impl Machine {
@@ -18,7 +18,7 @@ impl Machine {
                 0 => self.a = self.a / (1 << self.as_combo(op)),
 
                 // BXL
-                1 => self.b = self.b ^ (op as i32),
+                1 => self.b = self.b ^ (op as i64),
 
                 // BST
                 2 => self.b = self.as_combo(op) % 8,
@@ -61,7 +61,7 @@ impl Machine {
         Some((inst, op))
     }
 
-    fn as_combo(&self, op: u8) -> i32 {
+    fn as_combo(&self, op: u8) -> i64 {
         match op {
             0..=3 => op.into(),
             4 => self.a,
@@ -72,24 +72,53 @@ impl Machine {
     }
 }
 
-pub fn solve(part: u32) -> String {
+pub fn solve_p1() -> String {
     let mut machine = parse_input();
+    while machine.tick() {}
+    machine
+        .output
+        .iter()
+        .map(|n| n.to_string())
+        .collect::<Vec<String>>()
+        .join(",")
+}
 
-    match part {
-        0 => {
-            while machine.tick() {}
-            machine
-                .output
-                .iter()
-                .map(|n| n.to_string())
-                .collect::<Vec<String>>()
-                .join(",")
+pub fn solve_p2() -> i64 {
+    let machine = parse_input();
+
+    let program_as_i64 = machine
+        .program
+        .iter()
+        .map(|x| (*x) as i64)
+        .collect::<Vec<_>>();
+
+    for n in 0.. {
+        let mut candidate = machine.clone();
+        candidate.a = n;
+        if n % 10000000 == 0 {
+            dbg!(n);
         }
 
-        1 => "".to_string(),
-
-        _ => unreachable!(),
+        let mut early_exit = false;
+        while candidate.tick() {
+            let len = candidate.output.len();
+            if len > program_as_i64.len() {
+                early_exit = true;
+                break;
+            }
+            if len > 0 && candidate.output[len - 1] != program_as_i64[len - 1] {
+                early_exit = true;
+                break;
+            }
+        }
+        if early_exit {
+            continue;
+        }
+        if candidate.output == program_as_i64 {
+            return n;
+        }
     }
+    unreachable!("unless i made a mistake")
 }
 
 fn parse_input() -> Machine {
@@ -132,7 +161,7 @@ mod tests {
 
     #[test]
     fn day17() {
-        assert_eq!(solve(0), "2,3,4,7,5,7,3,0,7");
-        // assert_eq!(solve(1), 0);
+        assert_eq!(solve_p1(), "2,3,4,7,5,7,3,0,7");
+        assert_eq!(solve_p2(), 0);
     }
 }

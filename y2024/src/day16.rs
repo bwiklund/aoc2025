@@ -21,14 +21,6 @@ impl<T> Grid<T> {
             Some(&self.cells[y as usize][x as usize])
         }
     }
-
-    fn set(&mut self, x: i32, y: i32, val: T) {
-        if x < 0 || x >= self.w || y < 0 || y >= self.h {
-            return;
-        } else {
-            self.cells[y as usize][x as usize] = val;
-        }
-    }
 }
 
 fn dir_to_vec(dir: i8) -> (i32, i32) {
