@@ -84,6 +84,46 @@ pub fn solve_p1() -> String {
 }
 
 pub fn solve_p2() -> i64 {
+    /*
+    # program "decompiled":
+        2,4     b = a % 8            // basically popping the value off a, if a long number were a stack, and b is accum
+        1,2     b = b xor 2          // flip 2 bit of accum. accum is still <= 7
+        7,5     c = a / (2 pow b)    // c takes some value higher in a stack, basically
+        4,3     b = b xor c          // b is xor'd with that
+        0,3     a = a / 8            // move to next value in the a "stack"
+        1,7     b = b xor 7          // flip lowest 3 bits in b. possibly leaving some higher bits form 2 instructions ago?
+        5,5     print(b % 8)         // output low 3 bits of b
+        3,0     jnz start            // loop
+
+    # observations:
+        - a is effectively a stack of 3 bit numbers. hopefully one that fits in an i64. 63 positive bits would be 21 numbers max, so yes more than we need.
+        - a is popped off and then division is used to go to to the next value. b and c never are inputs to it. a is zero when the program is done (for the jnz)
+        - c is overwritten each frame and used as a temp var basically, for altering the output from b before OUT
+        - so the procedure in english is:
+
+        b = pop 3 bits from a
+
+            // do gross bitwise stuff to b
+        b = b xor 2
+        c = a / (2 pow b)
+        b = b xor c
+        print low 3 bits of b, flipped
+            // end gross bitwise stuff
+
+        advance a
+        loop if a has more
+
+        since we are pulling abitrary random stuff out of the higher bits of a every loop, we could work backwards from the end to make this work, since we know the last output has zero in the upper bits (since the next pass skips the jne)
+
+        (aside: i think the bitwise stuff in the middle is too gross to reason about for a human brain... but i can just test every 3 bit entry in reverse)
+
+        so the procedure could be:
+        for each element of the desired program, in reverse:
+            test all 7 possible things a could have been at the start, in the low bits
+            for each that gives an output we want, (will there be more than one?) move further into the problem (recursively?)
+
+    */
+
     let machine = parse_input();
 
     let program_as_i64 = machine
@@ -92,33 +132,42 @@ pub fn solve_p2() -> i64 {
         .map(|x| (*x) as i64)
         .collect::<Vec<_>>();
 
-    for n in 0.. {
-        let mut candidate = machine.clone();
-        candidate.a = n;
-        if n % 10000000 == 0 {
-            dbg!(n);
-        }
+    let a_value = rec(&machine, &program_as_i64, 0, 0).expect("Didn't work");
 
-        let mut early_exit = false;
-        while candidate.tick() {
-            let len = candidate.output.len();
-            if len > program_as_i64.len() {
-                early_exit = true;
-                break;
+    let mut final_check = machine.clone();
+    final_check.a = a_value;
+    while final_check.tick() {}
+    if final_check.output != program_as_i64 {
+        panic!("not a valid solution!");
+    }
+
+    a_value
+}
+
+fn rec(machine: &Machine, program_as_i64: &Vec<i64>, i: usize, a_accum: i64) -> Option<i64> {
+    for n in 0..8 {
+        let mut candidate = machine.clone();
+        candidate.output = program_as_i64[0..program_as_i64.len() - i - 1]
+            .iter()
+            .copied()
+            .collect();
+        let candidate_a = (a_accum << 3) + n;
+        candidate.a = candidate_a;
+        while candidate.tick() {}
+        if candidate.output == *program_as_i64 {
+            // dbg!(i, n, a_accum);
+            // go deeper back in time
+            if i == program_as_i64.len() - 1 {
+                return Some(candidate_a); // we're done i think
+            } else {
+                // recurse because each step has more than one valid solution
+                if let Some(res) = rec(&machine, &program_as_i64, i + 1, candidate_a) {
+                    return Some(res);
+                }
             }
-            if len > 0 && candidate.output[len - 1] != program_as_i64[len - 1] {
-                early_exit = true;
-                break;
-            }
-        }
-        if early_exit {
-            continue;
-        }
-        if candidate.output == program_as_i64 {
-            return n;
         }
     }
-    unreachable!("unless i made a mistake")
+    None
 }
 
 fn parse_input() -> Machine {
@@ -162,6 +211,6 @@ mod tests {
     #[test]
     fn day17() {
         assert_eq!(solve_p1(), "2,3,4,7,5,7,3,0,7");
-        assert_eq!(solve_p2(), 0);
+        assert_eq!(solve_p2(), 190384609508367);
     }
 }
