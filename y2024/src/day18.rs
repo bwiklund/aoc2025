@@ -1,4 +1,6 @@
-const SIZE: usize = 70;
+use std::collections::HashMap;
+
+const SIZE: usize = 71;
 
 struct Grid<T> {
     cells: Vec<Vec<T>>,
@@ -40,18 +42,39 @@ impl std::fmt::Display for Grid<bool> {
     }
 }
 
+fn to_id(x: i32, y: i32) -> i32 {
+    y * SIZE as i32 + x
+}
+
+fn from_id(id: i32) -> (i32, i32) {
+    (id % SIZE as i32, id / SIZE as i32)
+}
+
 pub fn solve(part: u32) -> i64 {
     let falling_bytes = parse_input();
     let mut grid = new_empty_grid();
 
     match part {
         0 => {
-            for i in 0..1000 {
+            for i in 0..1024 {
                 let (x, y) = falling_bytes[i];
                 grid.set(x, y, true)
             }
-            print!("{:}", grid);
-            0
+            // print!("{:}", grid);
+
+            let get_paths = |id: i32| -> Vec<i32> {
+                let (x, y) = from_id(id);
+                let mut paths = vec![];
+                for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1)] {
+                    if grid.get(x + dx, y + dy).map_or(false, |&b| !b) {
+                        paths.push(to_id(x + dx, y + dy));
+                    }
+                }
+                paths
+            };
+            pathfind(get_paths, 0, SIZE as i32 * SIZE as i32 - 1)
+                .map(|p| p.len() as i64 - 1)
+                .unwrap_or(0)
         }
 
         1 => 0,
@@ -60,11 +83,51 @@ pub fn solve(part: u32) -> i64 {
     }
 }
 
+// i32 is a unique key so this doesn't need to know what kind of grid or graph or whatever this is working against.
+fn pathfind(get_paths: impl Fn(i32) -> Vec<i32>, from: i32, to: i32) -> Option<Vec<i32>> {
+    let mut scores: HashMap<i32, i32> = HashMap::new();
+    let mut queue: Vec<i32> = vec![];
+
+    scores.insert(from, 0);
+    queue.push(from);
+
+    while let Some(next) = queue.pop() {
+        if next == to {
+            let mut path = vec![to];
+            while let Some(&score) = scores.get(path.last().unwrap()) {
+                if score == 0 {
+                    break;
+                }
+                let prev = get_paths(*path.last().unwrap())
+                    .into_iter()
+                    .find(|p| scores.get(p).map_or(false, |s| *s == score - 1))
+                    .unwrap();
+                path.push(prev);
+            }
+            path.reverse();
+            return Some(path);
+        }
+
+        let next_score = scores.get(&next).cloned().unwrap_or(0) + 1;
+        for p in get_paths(next) {
+            if !scores.contains_key(&p) || next_score < scores[&p] {
+                scores.insert(p, next_score);
+                queue.push(p);
+            }
+        }
+
+        queue
+            .sort_by_key(|&node| std::cmp::Reverse(scores.get(&node).cloned().unwrap_or(i32::MAX)));
+    }
+
+    None
+}
+
 fn new_empty_grid() -> Grid<bool> {
     Grid {
         cells: (0..SIZE)
             .into_iter()
-            .map(|y| (0..SIZE).into_iter().map(|x| false).collect())
+            .map(|_y| (0..SIZE).into_iter().map(|_x| false).collect())
             .collect(),
         w: SIZE as i32,
         h: SIZE as i32,
