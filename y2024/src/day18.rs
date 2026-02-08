@@ -50,37 +50,52 @@ fn from_id(id: i32) -> (i32, i32) {
     (id % SIZE as i32, id / SIZE as i32)
 }
 
-pub fn solve(part: u32) -> i64 {
-    let falling_bytes = parse_input();
+pub fn solve_p1(block_count: usize) -> i64 {
+    path_length_to_exit(&parse_input(), block_count).unwrap()
+}
+
+fn path_length_to_exit(falling_bytes: &Vec<(i32, i32)>, block_count: usize) -> Option<i64> {
     let mut grid = new_empty_grid();
 
-    match part {
-        0 => {
-            for i in 0..1024 {
-                let (x, y) = falling_bytes[i];
-                grid.set(x, y, true)
-            }
-            // print!("{:}", grid);
-
-            let get_paths = |id: i32| -> Vec<i32> {
-                let (x, y) = from_id(id);
-                let mut paths = vec![];
-                for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1)] {
-                    if grid.get(x + dx, y + dy).map_or(false, |&b| !b) {
-                        paths.push(to_id(x + dx, y + dy));
-                    }
-                }
-                paths
-            };
-            pathfind(get_paths, 0, SIZE as i32 * SIZE as i32 - 1)
-                .map(|p| p.len() as i64 - 1)
-                .unwrap_or(0)
-        }
-
-        1 => 0,
-
-        _ => unreachable!(),
+    for i in 0..block_count {
+        let (x, y) = falling_bytes[i];
+        grid.set(x, y, true)
     }
+
+    let get_paths = |id: i32| -> Vec<i32> {
+        let (x, y) = from_id(id);
+        let mut paths = vec![];
+        for (dx, dy) in [(-1, 0), (1, 0), (0, -1), (0, 1)] {
+            if grid.get(x + dx, y + dy).map_or(false, |&b| !b) {
+                paths.push(to_id(x + dx, y + dy));
+            }
+        }
+        paths
+    };
+
+    pathfind(get_paths, 0, SIZE as i32 * SIZE as i32 - 1).map(|p| p.len() as i64 - 1)
+}
+
+pub fn solve_p2() -> String {
+    let falling_bytes = parse_input();
+
+    // binary search
+    let mut low = 0;
+    let mut high = falling_bytes.len() - 1;
+    let mut result = 0;
+
+    while low <= high {
+        let mid = (low + high) / 2;
+        if path_length_to_exit(&falling_bytes, mid).is_some() {
+            result = mid;
+            low = mid + 1;
+        } else {
+            high = mid - 1;
+        }
+    }
+
+    let (x, y) = falling_bytes[result];
+    format!("{},{}", x, y)
 }
 
 // i32 is a unique key so this doesn't need to know what kind of grid or graph or whatever this is working against.
@@ -151,7 +166,7 @@ mod tests {
 
     #[test]
     fn day18() {
-        assert_eq!(solve(0), 0);
-        // assert_eq!(solve(1), 0);
+        assert_eq!(solve_p1(1024), 436);
+        assert_eq!(solve_p2(), "61,50");
     }
 }
