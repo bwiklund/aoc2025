@@ -15,6 +15,7 @@ pub mod day14;
 pub mod day15;
 pub mod day16;
 pub mod day17;
+pub mod day18;
 
 fn main() {
     println!("AOC2024! Usage:\ncargo test\ncargo test [pattern] -- --nocapture");
